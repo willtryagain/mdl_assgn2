@@ -47,7 +47,7 @@ X = 26
 Y = arr[X % 3]
 STEP_COST = -10/Y
 GAMMA = 0.999
-DELTA = 0.001 * 10**4
+DELTA = 0.001 #* 10**4
 
 class State:
     def __init__(self, pos, mat, arrow, mm_state, mm_health):
@@ -226,6 +226,8 @@ def get_utility(prob_state, U, attacked=False, state=None):
 def get_scaled_utility(U, s, a):
     total_utility = 0
     prob_state = get_prob_next_state(s, a)
+    if len(prob_state) == 0:
+        return None
     if s.mm_state == MM_STATE_DORMANT:
 
         for i in range(len(prob_state)):
@@ -251,8 +253,8 @@ def get_scaled_utility(U, s, a):
         raise ValueError
     return total_utility        
     
-def save_policy(index, U, P, path):
-    with open(path, 'a+') as f:
+def save_policy(index, U, P, path, mode='a+'):
+    with open(path, mode) as f:
         f.write('iteration={}\n'.format(index))
         U = np.around(U, 3)
         for state, utility in np.ndenumerate(U):
@@ -273,20 +275,6 @@ def value_iteration(path):
         for state, U_s in np.ndenumerate(U):
             if state[4] == 0:
                 continue
-            U_s_next = np.NINF
-
-            s = State(*state)
-            for action in range(NUM_ACTIONS):
-                U_s_next = max(U_s_next, get_scaled_utility(U, s, action))
-
-            U_next[state] = U_s_next
-            delta = max(delta, abs(U_s_next - U_s))
-        
-        U = deepcopy(U_next)
-
-        for state, _ in np.ndenumerate(U):
-            if state[4] == 0:
-                continue
 
             best_util = np.NINF
             best_action = None
@@ -294,11 +282,17 @@ def value_iteration(path):
             s = State(*state)
             for action in range(NUM_ACTIONS):
                 cur_utility = get_scaled_utility(U, s, action)
-                if best_util < cur_utility:
+                if cur_utility == None:
+                    continue
+                if cur_utility and best_util < cur_utility:
                     best_util = cur_utility
                     best_action = action
 
+            U_next[state] = best_util
             P[state] = best_action
+            delta = max(delta, abs(best_util - U_s))
+        
+        U = deepcopy(U_next)
 
         save_policy(index, U, P, path)
         index += 1
@@ -313,4 +307,6 @@ def value_iteration(path):
 os.makedirs('outputs', exist_ok=True)
 
 path = 'outputs/part_2_trace.txt'
+f = open(path, 'r+')
+f.truncate(0) # need '0' when using r+
 value_iteration(path)
