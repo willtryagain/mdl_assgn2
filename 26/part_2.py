@@ -47,7 +47,7 @@ X = 26
 Y = arr[X % 3]
 STEP_COST = -10/Y
 GAMMA = 0.999
-DELTA = 0.001 * 10**4
+DELTA = 0.001
 
 class State:
     def __init__(self, pos, mat, arrow, mm_state, mm_health):
@@ -199,27 +199,16 @@ def get_prob_next_state(s, a):
 
     raise ValueError
 
-def get_utility(prob_state, U, attacked=False, state=None):
+def get_utility(prob_state, U, attacked=False, s=None):
     utility = STEP_COST
     if attacked:
-        if state.pos == POSITION_EAST or state.pos == POSITION_CENTER:
-            state.mm_health = min(4, state.mm_health + 1)
-            utility += -40 + GAMMA * U[state.pos][state.mat][0][state.mm_state][state.mm_health]
-        else:
-            for p, s in prob_state:
-                assert s.mm_state == MM_STATE_DORMANT, "wrong state"
-                if s.mm_health == 0:
-                    utility += p * (GAMMA * U[s.pos][s.mat][s.arrow][s.mm_state][s.mm_health] + 50)
-                else:
-                    utility += p * GAMMA * U[s.pos][s.mat][s.arrow][s.mm_state][s.mm_health]
-
+        s.mm_health = min(4, s.mm_health + 1)
+        utility += -40 + GAMMA * U[s.pos][s.mat][0][MM_STATE_DORMANT][s.mm_health]
     else:
         for p, s in prob_state:
+            utility += p * GAMMA * U[s.pos][s.mat][s.arrow][s.mm_state][s.mm_health]
             if s.mm_health == 0:
-                utility += p * (GAMMA * U[s.pos][s.mat][s.arrow][s.mm_state][s.mm_health] + 50)
-            else:
-                utility += p * GAMMA * U[s.pos][s.mat][s.arrow][s.mm_state][s.mm_health]
-            
+                utility += 50
     
     return utility
 
@@ -240,77 +229,53 @@ def get_scaled_utility(U, s, a):
 
         total_utility += 0.5 * get_utility(prob_state, U)
 
-        # when attack is not successful other states will take place
         for i in range(len(prob_state)):
             prob_state[i][1].mm_state = MM_STATE_DORMANT
 
-        s.mm_state = MM_STATE_DORMANT
         total_utility += 0.5 * get_utility(prob_state, U, True, s)
 
     else:
         raise ValueError
     return total_utility        
     
-def save_policy(index, U, P, path):
-    with open(path, 'a+') as f:
-        f.write('iteration={}\n'.format(index))
-        U = np.around(U, 3)
-        for state, utility in np.ndenumerate(U):
-            s = State(*state)
-            f.write('{}:{}=[{:.3f}]\n'.format(s, ACTION_ARR[P[state]], utility))
-        f.write('\n')
+U = np.zeros((POSITIONS_RANGE, MATERIALS_RANGE, ARROWS_RANGE, MM_STATE_RANGE, MM_HEALTH_RANGE))   
+P = np.full((POSITIONS_RANGE, MATERIALS_RANGE, ARROWS_RANGE, MM_STATE_RANGE, MM_HEALTH_RANGE), -1, dtype='int')   
 
-def value_iteration(path):
+while True:
+    delta = np.NINF
+    U_next = np.zeros(U.shape)
+    for state, U_s in np.ndenumerate(U):
+        if state[4] == 0:
+            continue
+        U_s_next = np.NINF
 
-    U = np.zeros((POSITIONS_RANGE, MATERIALS_RANGE, ARROWS_RANGE, MM_STATE_RANGE, MM_HEALTH_RANGE))   
-    P = np.full((POSITIONS_RANGE, MATERIALS_RANGE, ARROWS_RANGE, MM_STATE_RANGE, MM_HEALTH_RANGE), -1, dtype='int')   
+        s = State(*state)
+        for action in range(NUM_ACTIONS):
+            U_s_next = max(U_s_next, get_scaled_utility(U, s, action))
 
-    index = 0
-    while True:
-        delta = np.NINF
-        U_next = np.zeros(U.shape)
+        U_next[state] = U_s_next
+        delta = max(delta, abs(U_s_next - U_s))
+    
+    U = deepcopy(U_next)
 
-        for state, U_s in np.ndenumerate(U):
-            if state[4] == 0:
-                continue
-            U_s_next = np.NINF
+    if delta < DELTA:
+        break
 
-            s = State(*state)
-            for action in range(NUM_ACTIONS):
-                U_s_next = max(U_s_next, get_scaled_utility(U, s, action))
+for state, U_s in np.ndenumerate(U):
+    if state[4] == 0:
+        continue
+    U_s_next = np.NINF
+    best_action = None
 
-            U_next[state] = U_s_next
-            delta = max(delta, abs(U_s_next - U_s))
-        
-        U = deepcopy(U_next)
+    s = State(*state)
+    for action in range(NUM_ACTIONS):
+        cur_utility = get_scaled_utility(U, s, action)
+        if U_s_next < cur_utility:
+            U_s_next = cur_utility
+            best_action = action
 
-        for state, _ in np.ndenumerate(U):
-            if state[4] == 0:
-                continue
+    P[state] = best_action
 
-            best_util = np.NINF
-            best_action = None
-
-            s = State(*state)
-            for action in range(NUM_ACTIONS):
-                cur_utility = get_scaled_utility(U, s, action)
-                if best_util < cur_utility:
-                    best_util = cur_utility
-                    best_action = action
-
-            P[state] = best_action
-
-        save_policy(index, U, P, path)
-        index += 1
-
-        if delta < DELTA:
-            break
-
-    return index
-
+for state, U_s in np.ndenumerate(U):
+    print(State(*state), U_s, ACTION_ARR[P[state]])
 # print(get_scaled_utility(U, State(POSITION_SOUTH, 0, 0, MM_STATE_DORMANT, 1), ACTION_UP))
-
-os.makedirs('outputs', exist_ok=True)
-
-path = 'outputs/part_2_trace.txt'
-value_iteration(path)
