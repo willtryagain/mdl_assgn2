@@ -47,11 +47,11 @@ X = 26
 Y = arr[X % 3]
 STEP_COST = -10/Y
 GAMMA = 0.999
-DELTA = 0.001 #* 10**4
+DELTA = 0.001 
 
 
-east_to_center = True
-active = False
+left_is_east_to_center = True
+stay_zero = False
 
 class State:
     def __init__(self, pos, mat, arrow, mm_state, mm_health):
@@ -74,7 +74,7 @@ class State:
 
 def get_prob_next_state(s, a):
     """
-    get next state and transition probability
+    get next state, transition probability
     after doing action a in state s
     """    
     s_a = deepcopy(s)
@@ -105,11 +105,9 @@ def get_prob_next_state(s, a):
         
         elif a == ACTION_STAY:
             s_b.pos = POSITION_EAST    
-            assert s_b.pos != s.pos, "modifies"
             return [[0.85, s_a], [0.15, s_b]]
         
         elif a == ACTION_CRAFT:
-            assert s.mat >= 0, "neg"
             if s.mat == 0:
                 return []
             s_c = deepcopy(s)
@@ -125,7 +123,7 @@ def get_prob_next_state(s, a):
     elif s.pos == POSITION_EAST:
         
         if a == ACTION_LEFT:
-            if east_to_center:
+            if left_is_east_to_center:
                 s_a.pos = POSITION_CENTER
             else:
                 s_a.pos = POSITION_WEST
@@ -137,13 +135,11 @@ def get_prob_next_state(s, a):
         elif a == ACTION_SHOOT:
             if s.arrow == 0:
                 return []
-            h = s.mm_health 
+            assert s.mm_health > 0, "dead mm"
             s_a.mm_health = max(0, s.mm_health - 1)
-            s.arrow -= 1
             s_a.arrow -= 1
-            if h:
-                assert s_a.mm_health != s.mm_health, "equal" 
-            return [[0.9, s_a], [0.1, s]]
+            s_b.arrow -= 1
+            return [[0.9, s_a], [0.1, s_b]]
         
         elif a == ACTION_HIT:
             s_a.mm_health = max(0, s.mm_health - 2)
@@ -163,10 +159,10 @@ def get_prob_next_state(s, a):
         elif a == ACTION_SHOOT:
             if s.arrow == 0:
                 return []
-            s.arrow -= 1
-            s_a.arrow -= 1
             s_a.mm_health = max(0, s.mm_health - 1)
-            return [[0.25, s_a], [0.75, s]]
+            s_a.arrow -= 1
+            s_b.arrow -= 1
+            return [[0.25, s_a], [0.75, s_b]]
         
         return []
 
@@ -194,10 +190,10 @@ def get_prob_next_state(s, a):
         elif a == ACTION_SHOOT:
             if s.arrow == 0:
                 return []
-            s.arrow -= 1
-            s_a.arrow -= 1
             s_a.mm_health = max(0, s.mm_health - 1)
-            return [[0.5, s_a], [0.5, s]]
+            s_a.arrow -= 1
+            s_b.arrow -= 1
+            return [[0.5, s_a], [0.5, s_b]]
         
         elif a == ACTION_HIT:
             s_a.mm_health = max(0, s.mm_health - 2)
@@ -207,20 +203,20 @@ def get_prob_next_state(s, a):
 
     raise ValueError
 
-def get_utility(prob_state, U, action, attacked=False, state=None):
+def get_utility(prob_state, U, action, attacked_state=None):
     utility = 0
-    if attacked:
+    if attacked_state:
         step_cost = STEP_COST
-        if action == ACTION_STAY and active:
+        if action == ACTION_STAY and stay_zero:
             step_cost = 0
-        if state.pos == POSITION_EAST or state.pos == POSITION_CENTER:
-            state.mm_health = min(4, state.mm_health + 1)
-            utility += step_cost + -40 + GAMMA * U[state.pos][state.mat][0][state.mm_state][state.mm_health]
+        if attacked_state.pos == POSITION_EAST or attacked_state.pos == POSITION_CENTER:
+            attacked_state.mm_health = min(4, attacked_state.mm_health + 1)
+            utility += step_cost + -40 + GAMMA * U[attacked_state.pos][attacked_state.mat][0][attacked_state.mm_state][attacked_state.mm_health]
         else:
             for p, s in prob_state:
                 assert s.mm_state == MM_STATE_DORMANT, "wrong state"
                 step_cost = STEP_COST
-                if action == ACTION_STAY and active:
+                if action == ACTION_STAY and stay_zero:
                     step_cost = 0
                 if s.mm_health == 0:
                     utility += p * (50 +  step_cost + GAMMA * U[s.pos][s.mat][s.arrow][s.mm_state][s.mm_health])
@@ -231,7 +227,7 @@ def get_utility(prob_state, U, action, attacked=False, state=None):
             p = prob_state[i][0]
             s = prob_state[i][1]
             step_cost = STEP_COST
-            if action == ACTION_STAY and active:
+            if action == ACTION_STAY and stay_zero:
                 step_cost = 0
             if s.mm_health == 0:
                 utility += p * (50 + step_cost + GAMMA * U[s.pos][s.mat][s.arrow][s.mm_state][s.mm_health])
@@ -332,23 +328,23 @@ f = open(path, 'w+')
 f.truncate(0) # need '0' when using r+
 value_iteration(path)
 
-path21 = 'outputs/part_2.1_trace.txt'
-f = open(path, 'w+')
+path21 = 'outputs/part_2.1_trace.txt'   
+f = open(path21, 'w+')
 f.truncate(0) # need '0' when using r+
-east_to_center = False
-value_iteration(path)
+left_is_east_to_center = False
+value_iteration(path21)
 
 path22 = 'outputs/part_2.2_trace.txt'
-f = open(path, 'w+')
+f = open(path22, 'w+')
 f.truncate(0) # need '0' when using r+
-east_to_center = True
-active = True
-value_iteration(path)
+left_is_east_to_center = True
+stay_zero = True   
+value_iteration(path22)
 
 path23 = 'outputs/part_2.3_trace.txt'
-f = open(path, 'w+')
+f = open(path23, 'w+')
 f.truncate(0) # need '0' when using r+
-east_to_center = True 
-active = False
+left_is_east_to_center = True 
+stay_zero = False
 GAMMA = 0.25
-value_iteration(path)
+value_iteration(path23)
