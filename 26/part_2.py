@@ -127,6 +127,7 @@ def get_prob_next_state(s, a):
                 s_a.pos = POSITION_CENTER
             else:
                 s_a.pos = POSITION_WEST
+            assert s_a.pos == POSITION_WEST, "wrong pos"
             return [[1, s_a]]
         
         elif a == ACTION_STAY:
@@ -274,7 +275,6 @@ def save_policy(index, U, P, path, mode='a+'):
         for state, utility in np.ndenumerate(U):
             s = State(*state)
             f.write('{}:{}=[{:.3f}]\n'.format(s, ACTION_ARR[P[state]], utility))
-        f.write('\n')
 
 def value_iteration(path):
 
@@ -322,10 +322,10 @@ def value_iteration(path):
 
 os.makedirs('outputs', exist_ok=True)
 
-path = 'outputs/part_2_trace.txt'
-f = open(path, 'w+')
-f.truncate(0) # need '0' when using r+
-value_iteration(path)
+# path = 'outputs/part_2_trace.txt'
+# f = open(path, 'w+')
+# f.truncate(0) # need '0' when using r+
+# value_iteration(path)
 
 # path21 = 'outputs/part_2.1_trace.txt'   
 # f = open(path21, 'w+')
