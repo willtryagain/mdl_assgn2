@@ -215,9 +215,6 @@ def get_utility(prob_state, U, action, attacked_state=None):
         else:
             for p, s in prob_state:
                 assert s.mm_state == MM_STATE_DORMANT, "wrong state"
-                step_cost = STEP_COST
-                if action == ACTION_STAY and stay_zero:
-                    step_cost = 0
                 if s.mm_health == 0:
                     utility += p * (50 +  step_cost + GAMMA * U[s.pos][s.mat][s.arrow][s.mm_state][s.mm_health])
                 else:
@@ -255,14 +252,15 @@ def get_scaled_utility(U, s, a):
     
     elif s.mm_state == MM_STATE_READY:
 
+        # not attacking
         total_utility += 0.5 * get_utility(prob_state, U, a)
 
-        # when attack is not successful other states will take place
+        # attack
         for i in range(len(prob_state)):
             prob_state[i][1].mm_state = MM_STATE_DORMANT
 
         s.mm_state = MM_STATE_DORMANT
-        total_utility += 0.5 * get_utility(prob_state, U, a, True, s)
+        total_utility += 0.5 * get_utility(prob_state, U, a, s)
 
     else:
         raise ValueError
