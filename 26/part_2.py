@@ -204,8 +204,10 @@ def get_prob_next_state(s, a):
     raise ValueError
 
 def get_utility(prob_state, U, action, attacked_state=None):
-    utility = 0
+    # utility =  STEP_COST #  0
+    utility = 0 
     if attacked_state:
+        # step_cost = 0 # STEP_COST
         step_cost = STEP_COST
         if action == ACTION_STAY and stay_zero:
             step_cost = 0
@@ -220,9 +222,8 @@ def get_utility(prob_state, U, action, attacked_state=None):
                 else:
                     utility += p * (step_cost + GAMMA * U[s.pos][s.mat][s.arrow][s.mm_state][s.mm_health])
     else:
-        for i in range(len(prob_state)):
-            p = prob_state[i][0]
-            s = prob_state[i][1]
+        for p, s in prob_state:
+            # step_cost = 0 # STEP_COST
             step_cost = STEP_COST
             if action == ACTION_STAY and stay_zero:
                 step_cost = 0
@@ -269,7 +270,7 @@ def get_scaled_utility(U, s, a):
 def save_policy(index, U, P, path, mode='a+'):
     with open(path, mode) as f:
         f.write('iteration={}\n'.format(index))
-        U = np.around(U, 3)
+        # U = np.around(U, 3)
         for state, utility in np.ndenumerate(U):
             s = State(*state)
             f.write('{}:{}=[{:.3f}]\n'.format(s, ACTION_ARR[P[state]], utility))
@@ -326,23 +327,23 @@ f = open(path, 'w+')
 f.truncate(0) # need '0' when using r+
 value_iteration(path)
 
-path21 = 'outputs/part_2.1_trace.txt'   
-f = open(path21, 'w+')
-f.truncate(0) # need '0' when using r+
-left_is_east_to_center = False
-value_iteration(path21)
+# path21 = 'outputs/part_2.1_trace.txt'   
+# f = open(path21, 'w+')
+# f.truncate(0) # need '0' when using r+
+# left_is_east_to_center = False
+# value_iteration(path21)
 
-path22 = 'outputs/part_2.2_trace.txt'
-f = open(path22, 'w+')
-f.truncate(0) # need '0' when using r+
-left_is_east_to_center = True
-stay_zero = True   
-value_iteration(path22)
+# path22 = 'outputs/part_2.2_trace.txt'
+# f = open(path22, 'w+')
+# f.truncate(0) # need '0' when using r+
+# left_is_east_to_center = True
+# stay_zero = True   
+# value_iteration(path22)
 
-path23 = 'outputs/part_2.3_trace.txt'
-f = open(path23, 'w+')
-f.truncate(0) # need '0' when using r+
-left_is_east_to_center = True 
-stay_zero = False
-GAMMA = 0.25
-value_iteration(path23)
+# path23 = 'outputs/part_2.3_trace.txt'
+# f = open(path23, 'w+')
+# f.truncate(0) # need '0' when using r+
+# left_is_east_to_center = True 
+# stay_zero = False
+# GAMMA = 0.25
+# value_iteration(path23)
