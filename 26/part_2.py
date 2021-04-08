@@ -49,6 +49,10 @@ STEP_COST = -10/Y
 GAMMA = 0.999
 DELTA = 0.001 #* 10**4
 
+
+east_to_center = True
+active = False
+
 class State:
     def __init__(self, pos, mat, arrow, mm_state, mm_health):
         if (pos not in POSITIONS_VALUES) or (mat not in MATERIALS_VALUES) or \
@@ -105,6 +109,7 @@ def get_prob_next_state(s, a):
             return [[0.85, s_a], [0.15, s_b]]
         
         elif a == ACTION_CRAFT:
+            assert s.mat >= 0, "neg"
             if s.mat == 0:
                 return []
             s_c = deepcopy(s)
@@ -120,7 +125,10 @@ def get_prob_next_state(s, a):
     elif s.pos == POSITION_EAST:
         
         if a == ACTION_LEFT:
-            s_a.pos = POSITION_CENTER
+            if east_to_center:
+                s_a.pos = POSITION_CENTER
+            else:
+                s_a.pos = POSITION_WEST
             return [[1, s_a]]
         
         elif a == ACTION_STAY:
@@ -199,25 +207,31 @@ def get_prob_next_state(s, a):
 
     raise ValueError
 
-def get_utility(prob_state, U, action, active=False, attacked=False, state=None):
+def get_utility(prob_state, U, action, attacked=False, state=None):
     utility = 0
     if attacked:
+        step_cost = STEP_COST
+        if action == ACTION_STAY and active:
+            step_cost = 0
         if state.pos == POSITION_EAST or state.pos == POSITION_CENTER:
             state.mm_health = min(4, state.mm_health + 1)
-            utility += -40 + GAMMA * U[state.pos][state.mat][0][state.mm_state][state.mm_health]
+            utility += step_cost + -40 + GAMMA * U[state.pos][state.mat][0][state.mm_state][state.mm_health]
         else:
             for p, s in prob_state:
                 assert s.mm_state == MM_STATE_DORMANT, "wrong state"
+                step_cost = STEP_COST
+                if action == ACTION_STAY and active:
+                    step_cost = 0
                 if s.mm_health == 0:
-                    utility += p * (GAMMA * U[s.pos][s.mat][s.arrow][s.mm_state][s.mm_health] + 50)
+                    utility += p * (50 +  step_cost + GAMMA * U[s.pos][s.mat][s.arrow][s.mm_state][s.mm_health])
                 else:
-                    utility += p * GAMMA * U[s.pos][s.mat][s.arrow][s.mm_state][s.mm_health]
+                    utility += p * (step_cost + GAMMA * U[s.pos][s.mat][s.arrow][s.mm_state][s.mm_health])
     else:
         for i in range(len(prob_state)):
             p = prob_state[i][0]
             s = prob_state[i][1]
             step_cost = STEP_COST
-            if i == 0 and action == ACTION_STAY and active:
+            if action == ACTION_STAY and active:
                 step_cost = 0
             if s.mm_health == 0:
                 utility += p * (50 + step_cost + GAMMA * U[s.pos][s.mat][s.arrow][s.mm_state][s.mm_health])
@@ -252,7 +266,7 @@ def get_scaled_utility(U, s, a):
             prob_state[i][1].mm_state = MM_STATE_DORMANT
 
         s.mm_state = MM_STATE_DORMANT
-        total_utility += 0.5 * get_utility(prob_state, U, a, False, True, s)
+        total_utility += 0.5 * get_utility(prob_state, U, a, True, s)
 
     else:
         raise ValueError
@@ -304,6 +318,8 @@ def value_iteration(path):
 
         if delta < DELTA:
             break
+        
+        # print()
 
     return index
 
@@ -312,6 +328,27 @@ def value_iteration(path):
 os.makedirs('outputs', exist_ok=True)
 
 path = 'outputs/part_2_trace.txt'
-f = open(path, 'r+')
+f = open(path, 'w+')
 f.truncate(0) # need '0' when using r+
+value_iteration(path)
+
+path21 = 'outputs/part_2.1_trace.txt'
+f = open(path, 'w+')
+f.truncate(0) # need '0' when using r+
+east_to_center = False
+value_iteration(path)
+
+path22 = 'outputs/part_2.2_trace.txt'
+f = open(path, 'w+')
+f.truncate(0) # need '0' when using r+
+east_to_center = True
+active = True
+value_iteration(path)
+
+path23 = 'outputs/part_2.3_trace.txt'
+f = open(path, 'w+')
+f.truncate(0) # need '0' when using r+
+east_to_center = True 
+active = False
+GAMMA = 0.25
 value_iteration(path)
