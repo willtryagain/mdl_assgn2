@@ -62,7 +62,7 @@ class State:
         self.mm_health = mm_health
 
     def get_state(self):
-        return (self.pos, self.mat, self.arrow, self.mm_state, self.mm_health)
+        return (POSITION_ARR[self.pos], self.mat, self.arrow, MM_STATE_ARR[self.mm_state], self.mm_health)
 
     def get_hash(self):
         return (self.pos * (MATERIALS_RANGE * ARROWS_RANGE * MM_STATE_RANGE * MM_HEALTH_RANGE) + 
@@ -102,7 +102,8 @@ class State:
         if action == ACTION_DOWN:
             return self.pos == POSITION_NORTH or self.pos == POSITION_CENTER
 
-        raise ValueError('invalid action')
+        if action != ACTION_STAY:
+            raise ValueError('invalid action')
 
     def get_actions(self):
         actions = []
@@ -136,6 +137,9 @@ class State:
 
     def get_distrib(self, action):
         if action not in self.get_actions():
+            print(self)
+            print(ACTION_ARR[action])
+            print(ACTION_ARR[action] for action in  self.get_actions())
             raise ValueError
 
         if action == ACTION_NONE:
@@ -372,14 +376,14 @@ class IJ:
 
         index = 0
         for i in range(NUM_STATES):
-            s = State.get_state_from_hash(i)
-            actions = s.get_actions()
+            state = State.get_state_from_hash(i)
+            actions = state.get_actions()
 
             for action in actions:
                 a[i][index] += 1
                 
-                next_distrib = s.get_distrib(action)
-                next_distrib = s.get_scaled_distrib(next_distrib)
+                next_distrib = state.get_distrib(action)
+                next_distrib = state.get_scaled_distrib(next_distrib)
 
                 for p, s in next_distrib:
                     a[s.get_hash()][index] -= p
@@ -412,7 +416,7 @@ class IJ:
         x = cp.Variable((self.c, 1), 'x')
 
         constraints = [
-            cp.matmul(self.a, x) == self.get_alpha,
+            cp.matmul(self.a, x) == self.get_alpha(),
             x >= 0
         ] 
 
@@ -452,7 +456,7 @@ class IJ:
 
     def save_output(self):
         path = "outputs/part_3_output.json"
-        obj = json.dumps(self.sol_dict, indent=4)
+        obj = json.dumps(self.sol_dict)
         with open(path, 'w+') as f:
             f.write(obj)
 
