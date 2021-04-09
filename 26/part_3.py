@@ -64,10 +64,10 @@ class State:
         return (self.pos, self.mat, self.arrow, self.mm_state, self.mm_health)
 
     def get_hash(self):
-        return (self.pos * (MATERIALS_RANGE * ARROWS_RANGE * MM_STATE_RANGE * MM_STATE_RANGE) + 
-                self.mat * (ARROWS_RANGE * MM_STATE_RANGE * MM_STATE_RANGE) +
-                self.arrow * (MM_STATE_RANGE * MM_STATE_RANGE) +
-                self.mm_state * MM_STATE_RANGE +
+        return (self.pos * (MATERIALS_RANGE * ARROWS_RANGE * MM_STATE_RANGE * MM_HEALTH_RANGE) + 
+                self.mat * (ARROWS_RANGE * MM_STATE_RANGE * MM_HEALTH_RANGE) +
+                self.arrow * (MM_STATE_RANGE * MM_HEALTH_RANGE) +
+                self.mm_state * MM_HEALTH_RANGE +
                 self.mm_health)
 
     def valid_action(self, action):
@@ -87,7 +87,7 @@ class State:
             return self.pos == POSITION_SOUTH
 
         if action == ACTION_CRAFT:
-            return self.pos == POSITION_NORTH
+            return self.pos == POSITION_NORTH and self.mat > 0
 
         if action == ACTION_UP:
             return self.pos == POSITION_SOUTH or self.pos == POSITION_CENTER
@@ -110,12 +110,36 @@ class State:
                 actions.append(i)
         return actions
 
+    def get_scaled_distrib(self, distrib):
+        next_distrib = []
+
+
+        if self.mm_state == MM_STATE_READY:
+            for p, s in distrib:
+                next_distrib.append((p*0.5, s))
+            if self.pos == POSITION_CENTER or state.pos == POSITION_EAST:
+                next_distrib.append((1, State(self.pos, self.mat, 0, MM_STATE_DORMANT, min(4, self.mm_health + 1))))
+
+
+        
+        for state in states:
+            next_states.append(State(state.pos, state.mat, state.arrow, MM_STATE_DORMANT, state.mm_health))
+        return next_states
+
     def get_prob_state(self, action):
         if action not in self.get_actions():
             raise ValueError
 
         if action == ACTION_NONE:
             return []
+
+        if self.mm_state == MM_STATE_READY:
+
+            if self.pos == POSITION_CENTER:
+                return [
+                    (0.5, s_a),
+                    (0.5, s_b)
+                ]
 
         if action == ACTION_SHOOT:
             s_a = State(self.pos, self.mat, self.arrow - 1, self.mm_state, self.mm_health - 1)

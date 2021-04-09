@@ -127,7 +127,7 @@ def get_prob_next_state(s, a):
                 s_a.pos = POSITION_CENTER
             else:
                 s_a.pos = POSITION_WEST
-            assert s_a.pos == POSITION_WEST, "wrong pos"
+            # assert s_a.pos == POSITION_WEST, "wrong pos"
             return [[1, s_a]]
         
         elif a == ACTION_STAY:
@@ -322,28 +322,28 @@ def value_iteration(path):
 
 os.makedirs('outputs', exist_ok=True)
 
-# path = 'outputs/part_2_trace.txt'
-# f = open(path, 'w+')
-# f.truncate(0) # need '0' when using r+
-# value_iteration(path)
+path = 'outputs/part_2_trace.txt'
+f = open(path, 'w+')
+f.truncate(0) # need '0' when using r+
+value_iteration(path)
 
-# path21 = 'outputs/part_2.1_trace.txt'   
-# f = open(path21, 'w+')
-# f.truncate(0) # need '0' when using r+
-# left_is_east_to_center = False
-# value_iteration(path21)
+path21 = 'outputs/part_2.1_trace.txt'   
+f = open(path21, 'w+')
+f.truncate(0) # need '0' when using r+
+left_is_east_to_center = False
+value_iteration(path21)
 
-# path22 = 'outputs/part_2.2_trace.txt'
-# f = open(path22, 'w+')
-# f.truncate(0) # need '0' when using r+
-# left_is_east_to_center = True
-# stay_zero = True   
-# value_iteration(path22)
+path22 = 'outputs/part_2.2_trace.txt'
+f = open(path22, 'w+')
+f.truncate(0) # need '0' when using r+
+left_is_east_to_center = True
+stay_zero = True   
+value_iteration(path22)
 
-# path23 = 'outputs/part_2.3_trace.txt'
-# f = open(path23, 'w+')
-# f.truncate(0) # need '0' when using r+
-# left_is_east_to_center = True 
-# stay_zero = False
-# GAMMA = 0.25
-# value_iteration(path23)
+path23 = 'outputs/part_2.3_trace.txt'
+f = open(path23, 'w+')
+f.truncate(0) # need '0' when using r+
+left_is_east_to_center = True 
+stay_zero = False
+GAMMA = 0.25
+value_iteration(path23)
