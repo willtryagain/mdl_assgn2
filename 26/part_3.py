@@ -1,7 +1,7 @@
+
 import numpy as np
-from copy import deepcopy
-from functools import reduce
-from operator import add
+import cvxpy as cp
+import json
 import os
 
 POSITIONS_RANGE = 5
@@ -351,3 +351,117 @@ class State:
 class IJ:
 
     def __init__(self):
+        self.c = self.get_columns_dim()
+        self.r = self.get_r()
+        self.a = self.get_a()
+        self.alpha = self.get_alpha()
+        self.x = self.quest()
+        self.policy = []
+        self.sol_dict = {}
+        self.objective = 0.0
+
+    def get_columns_dim(self):
+        d = 0
+        for i in range(NUM_STATES):
+            d += len(State.get_state_from_hash(i).get_actions())
+
+        return d
+
+    def get_a(self):
+        a = np.zeros((NUM_STATES, self.c), dtype=np.float64)
+
+        index = 0
+        for i in range(NUM_STATES):
+            s = State.get_state_from_hash(i)
+            actions = s.get_actions()
+
+            for action in actions:
+                a[i][index] += 1
+                
+                next_distrib = s.get_distrib(action)
+                next_distrib = s.get_scaled_distrib(next_distrib)
+
+                for p, s in next_distrib:
+                    a[s.get_hash()][index] -= p
+
+                index += 1
+        
+        return a
+
+    def get_r(self):
+        r = np.full((1, self.c), STEP_COST)
+
+        index = 0
+        for i in range(NUM_STATES):
+            actions = State.get_state_from_hash(i).get_actions()
+
+            for action in actions:
+                if action == ACTION_NONE:
+                    r[0][index] = 0
+                index += 1
+
+        return r
+
+    def get_alpha(self):
+        alpha = np.zeros((NUM_STATES, 1))
+        s = State(POSITIONS_VALUES[-1], MATERIALS_VALUES[-1], ARROWS_VALUES[-1], MM_STATE_VALUES[-1], MM_HEALTH_VALUES[-1]).get_hash()
+        alpha[s][0] = 1
+        return alpha
+
+    def quest(self):
+        x = cp.Variable((self.c, 1), 'x')
+
+        constraints = [
+            cp.matmul(self.a, x) == self.get_alpha,
+            x >= 0
+        ] 
+
+        objective = cp.Maximize(cp.matmul(self.r, x))
+        problem = cp.Problem(objective, constraints)
+
+        solution = problem.solve()
+        self.objective = solution
+        arr = list(x.value)
+        l = [float(val) for val in arr]
+        return l
+
+    def get_policy(self):
+        index = 0
+        for i in range(NUM_STATES):
+            s = State.get_state_from_hash(i)
+            actions = s.get_actions()
+            action_index = np.argmax(self.x[index : index + len(actions)]) 
+            index += len(actions)
+            best_action = actions[action_index]
+            local = []
+            local.append(list(s.get_state()))
+            local.append(ACTION_ARR[best_action])
+            self.policy.append(local)
+
+        
+    def generate_dict(self):
+        self.sol_dict["a"] = self.a.tolist()
+        r = [float(val) for val in np.transpose(self.r)]
+        self.sol_dict["r"] = r
+        alpha = [float(val) for val in self.alpha]
+        self.sol_dict["alpha"] = alpha
+        self.sol_dict["x"] = self.x
+        self.sol_dict["policy"] = self.policy
+        self.sol_dict["objective"] = float(self.objective)
+
+
+    def save_output(self):
+        path = "outputs/part_3_output.json"
+        obj = json.dumps(self.sol_dict, indent=4)
+        with open(path, 'w+') as f:
+            f.write(obj)
+
+    def run(self):
+        os.makedirs('outputs', exist_ok=True)
+        self.quest()
+        self.get_policy()
+        self.generate_dict()
+        self.save_output()
+
+ij = IJ()
+ij.run()
