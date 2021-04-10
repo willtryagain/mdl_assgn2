@@ -88,7 +88,7 @@ class State:
             return self.pos == POSITION_SOUTH
 
         if action == ACTION_CRAFT:
-            return self.pos == POSITION_NORTH and self.mat > 0
+            return self.pos == POSITION_NORTH and (self.mat > 0)
 
         if action == ACTION_UP:
             return self.pos == POSITION_SOUTH or self.pos == POSITION_CENTER
@@ -119,7 +119,7 @@ class State:
             for p, s in distrib:
                 next_distrib.append((p*0.5, s))
             if self.pos == POSITION_CENTER or self.pos == POSITION_EAST:
-                next_distrib.append((1, State(self.pos, self.mat, 0, MM_STATE_DORMANT, min(4, self.mm_health + 1))))
+                next_distrib.append((0.5, State(self.pos, self.mat, 0, MM_STATE_DORMANT, min(4, self.mm_health + 1))))
             else:
                 for p, s in distrib:
                     next_distrib.append((p*0.5, State(s.pos, s.mat, s.arrow, MM_STATE_DORMANT, s.mm_health)))
@@ -137,9 +137,9 @@ class State:
 
     def get_distrib(self, action):
         if action not in self.get_actions():
-            print(self)
-            print(ACTION_ARR[action])
-            print(ACTION_ARR[action] for action in  self.get_actions())
+            # print(self)
+            # print(ACTION_ARR[action])
+            # print(ACTION_ARR[action] for action in  self.get_actions())
             raise ValueError
 
         if action == ACTION_NONE:
